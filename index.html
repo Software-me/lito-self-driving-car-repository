@@ -1,0 +1,49 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Lito 3D Self-Driving Car Simulator</title>
+    <link rel="stylesheet" href="style.css" />
+  </head>
+  <body>
+    <div id="ui">
+      <div id="title">Lito 3D Self-Driving Car (Driver View)</div>
+      <div id="hud">
+        <div class="hud-section">
+          <span class="label">Mode:</span>
+          <span id="modeLabel">Autonomous</span>
+        </div>
+        <div class="hud-section">
+          <span class="label">Speed:</span>
+          <span id="speedLabel">0.0 m/s</span>
+        </div>
+        <div class="hud-section">
+          <span class="label">Status:</span>
+          <span id="statusLabel">Following lane</span>
+        </div>
+      </div>
+    </div>
+
+    <canvas id="view"></canvas>
+    <!-- 2D overlay: dashboard + speedometer (drawn in js/main.js) -->
+    <canvas id="dash"></canvas>
+
+    <div id="steering-wheel-container">
+      <span id="steering-wheel-label" class="steering-wheel-caption">Steering wheel</span>
+      <div id="steering-wheel" role="img" aria-label="Steering wheel">
+        <div id="steering-center"></div>
+      </div>
+    </div>
+
+    <div id="controls-panel">
+      <button id="toggleModeBtn">Toggle Manual / Auto</button>
+      <button id="resetBtn">Reset Scene</button>
+    </div>
+
+    <!-- Three.js global, then ES module app (needs http:// server, not file://) -->
+    <script src="https://cdn.jsdelivr.net/npm/three@0.160.0/build/three.min.js"></script>
+    <script type="module" src="js/main.js"></script>
+  </body>
+</html>
+
