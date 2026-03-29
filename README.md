@@ -80,10 +80,6 @@ The goal is to provide a **shippable intermediate** that can be expanded toward 
 
 ### Clone and run
 
-```bash
-git clone https://github.com/YOUR_USERNAME/YOUR_REPO.git
-cd YOUR_REPO
-python -m http.server 8000
-```
+
 
 
