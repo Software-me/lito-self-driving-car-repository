@@ -86,18 +86,4 @@ cd YOUR_REPO
 python -m http.server 8000
 ```
 
-Open **http://localhost:8000** in Chrome, Edge, or Firefox.
 
-*(Replace `YOUR_USERNAME/YOUR_REPO` with your GitHub path after you create the repository.)*
-
-### GitHub Pages
-
-1. Push this repo to GitHub.  
-2. **Settings → Pages → Build and deployment**: source **Deploy from a branch**, branch **main**, folder **/ (root)**.  
-3. Share the `https://YOUR_USERNAME.github.io/YOUR_REPO/` URL—Three.js loads from the CDN; no install required for visitors.
-
----
-
-## License
-
-Add a `LICENSE` file if you want an explicit license (e.g. MIT). Until then, all rights reserved unless you state otherwise.
