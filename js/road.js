@@ -1,4 +1,4 @@
-/** Main road slab, dashed lines, four-way intersection mesh, scenery (trees / poles). */
+/** Main road slab, dashed lines, four-way intersection mesh, scenery (trees, street lamps). */
 import { world as W } from "./world.js";
 import * as C from "./config.js";
 
@@ -19,9 +19,13 @@ export function buildRoad() {
     gapSize: 4,
     linewidth: 1,
   });
-  /* Local Z span on the slab; Z is shifted each frame so dashes scroll while staying on roadRig. */
-  const nearZ = 420;
-  const farZ = -1400;
+  /* Same scroll math as updateDashLineScroll (scroll = −car.z); car is added after buildRoad so ~start z=6. */
+  const approxStartZ = 6;
+  const baseNear = Number(C.DASH_LINE_BASE_NEAR) || 900;
+  const baseFar = Number.isFinite(Number(C.DASH_LINE_BASE_FAR)) ? Number(C.DASH_LINE_BASE_FAR) : -24500;
+  const scroll0 = -approxStartZ;
+  const nearZ = baseNear + scroll0;
+  const farZ = baseFar + scroll0;
   const y = 0.06;
 
   function makeDashLine(x) {
@@ -142,12 +146,13 @@ export function buildScenery() {
   const THREE = globalThis.THREE;
   const trunkMat = new THREE.MeshStandardMaterial({ color: 0x4a3728, roughness: 0.9, metalness: 0.05 });
   const foliageMat = new THREE.MeshStandardMaterial({ color: 0x2d5a27, roughness: 0.8, metalness: 0 });
-  const poleMat = new THREE.MeshStandardMaterial({ color: 0x333333, roughness: 0.6, metalness: 0.3 });
 
-  const zStart = 250;
-  const zEnd = -1400;
+  const zStart = Number(C.SCENERY_Z_START) || 250;
+  const zEnd = Number.isFinite(Number(C.SCENERY_Z_END)) ? Number(C.SCENERY_Z_END) : -11000;
   const treeSpacing = 42;
-  const poleSpacing = 95;
+  /* Fallback if static import/cache serves an old config without these exports (avoids NaN loop → one row behind car). */
+  const poleSpacing = Math.max(8, Number(C.STREET_LAMP_SPACING) || 40);
+  const poolEvery = Math.max(1, Math.floor(Number(C.STREET_LAMP_POINT_LIGHT_EVERY_N)) || 10);
 
   for (let z = zStart; z > zEnd; z -= treeSpacing) {
     const jitter = (z * 0.1) % 1;
@@ -170,26 +175,74 @@ export function buildScenery() {
     addTree(7 + rightOffset, z, heightVar);
   }
 
+  /* Basic materials; fog:false so globes stay readable down the road (scene fog was hiding distant poles). */
+  const lampPoleBasic = new THREE.MeshBasicMaterial({ color: 0x5a5a64, fog: false });
+  const lampHeadBasic = new THREE.MeshBasicMaterial({ color: 0xfff2b8, fog: false });
+
+  function addStreetLamp(worldX, z, towardCenterSign, withGroundPool) {
+    const armLen = 2.15;
+    const armY = 5.05;
+    const g = new THREE.Group();
+    g.frustumCulled = false;
+    g.position.set(worldX, 0, z);
+
+    const stem = new THREE.Mesh(new THREE.CylinderGeometry(0.11, 0.13, 5.4, 8), lampPoleBasic);
+    stem.frustumCulled = false;
+    stem.position.y = 2.7;
+    stem.castShadow = false;
+
+    const arm = new THREE.Mesh(new THREE.BoxGeometry(armLen, 0.14, 0.16), lampPoleBasic);
+    arm.frustumCulled = false;
+    arm.position.set(towardCenterSign * (armLen * 0.5 + 0.06), armY, 0);
+    arm.castShadow = false;
+
+    const head = new THREE.Mesh(new THREE.SphereGeometry(0.42, 12, 12), lampHeadBasic);
+    head.frustumCulled = false;
+    head.position.set(towardCenterSign * (armLen + 0.12), armY, 0);
+    head.castShadow = false;
+
+    g.add(stem, arm, head);
+
+    if (withGroundPool) {
+      /* decay optional in older three builds; distance + intensity give the warm pool. */
+      const bulb = new THREE.PointLight(0xffcc88, 0.36, 58);
+      bulb.decay = 2;
+      bulb.position.copy(head.position);
+      g.add(bulb);
+    }
+
+    W.scene.add(g);
+  }
+
+  const leftX = -14 - 2.5;
+  const rightX = 7 + 2.5;
+  /** Caps real-time point lights so mobile GPUs don’t hit shader/uniform limits (poles stay mesh-only). */
+  let streetPoolBulbs = 0;
+  const maxStreetPoolBulbs = 16;
+  let lampRow = 0;
   for (let z = zStart; z > zEnd; z -= poleSpacing) {
-    const pole = new THREE.Mesh(new THREE.CylinderGeometry(0.08, 0.1, 4.5, 8), poleMat);
-    pole.position.set(-14 - 2.5, 2.25, z);
-    pole.castShadow = false;
-    W.scene.add(pole);
-    const pole2 = new THREE.Mesh(new THREE.CylinderGeometry(0.08, 0.1, 4.5, 8), poleMat);
-    pole2.position.set(7 + 2.5, 2.25, z);
-    pole2.castShadow = false;
-    W.scene.add(pole2);
+    const poolThisRow =
+      lampRow % poolEvery === 0 && streetPoolBulbs < maxStreetPoolBulbs;
+    /* One bulb per sparse row (left pole only) halves light count; right pole is still a bright mesh. */
+    addStreetLamp(leftX, z, 1, poolThisRow);
+    if (poolThisRow) streetPoolBulbs++;
+    addStreetLamp(rightX, z, -1, false);
+    lampRow++;
   }
 }
 
-/** Slide dash segments along rig local Z so markings move past the car; rig+car move together, so a fixed local segment would look frozen. */
+/**
+ * Slide lane dashes opposite to car motion: z = BASE + scroll, scroll = −car.z (endpoints drift +Z as car drives −Z).
+ */
 export function updateDashLineScroll() {
   const car = W.car;
   if (!car) return;
   const y = 0.06;
-  const baseNear = 420;
-  const baseFar = -1400;
   const scroll = -car.position.z;
+  const baseNear = Number(C.DASH_LINE_BASE_NEAR) || 900;
+  const baseFar = Number.isFinite(Number(C.DASH_LINE_BASE_FAR)) ? Number(C.DASH_LINE_BASE_FAR) : -24500;
+  const zRear = baseNear + scroll;
+  const zFwd = baseFar + scroll;
 
   const lines = [
     [W.centerDashLine, 0],
@@ -202,8 +255,8 @@ export function updateDashLineScroll() {
     if (!line) continue;
     const pos = line.geometry.attributes.position;
     if (pos && pos.count >= 2) {
-      pos.setXYZ(0, x, y, baseNear + scroll);
-      pos.setXYZ(1, x, y, baseFar + scroll);
+      pos.setXYZ(0, x, y, zRear);
+      pos.setXYZ(1, x, y, zFwd);
       pos.needsUpdate = true;
       line.geometry.computeBoundingSphere();
     }
