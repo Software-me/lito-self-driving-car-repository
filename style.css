@@ -15,12 +15,8 @@
   --mode-label: #4ef3c1;
   --status-label: #ffe082;
 
-  /* Steering Wheel */
-  --steering-bg: radial-gradient(circle at 32% 12%, #3d4555, #1a1d28 52%, #080a10 88%);
-  --steering-border: rgba(22, 26, 38, 0.96);
+  /* Steering wheel — rim/spokes always match mode-label (left-turn teal) + glow */
   --steering-shadow: rgba(0, 0, 0, 0.75);
-  --steering-inner-gradient: radial-gradient(circle at 30% 10%, #c4ccd4, #4a5058 42%, #1a1e22 100%);
-  --steering-crossbar: linear-gradient(to bottom, #cfd8dc, #263238);
 
   /* Text Glow */
   --text-glow: rgba(120, 210, 255, 0.95);
@@ -39,6 +35,10 @@
   /* Speedometer Needle (for JS reading) */
   --needle-color: #33ff66;
   --needle-glow: rgba(51, 255, 102, 0.5);
+
+  /* LEFT/RIGHT signals + steering caption — same stack; scales up on narrow viewports (phones). */
+  --dash-label-font: system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+  --dash-label-size: clamp(0.95rem, 3.6vw, 1.12rem);
 }
 
 /* ======================================
@@ -88,6 +88,78 @@ html, body {
   z-index: 4;
 }
 
+/* Same vertical band as speedometer (dash canvas cy = 42% → center 58% up from dash bottom; dash = 38vh) */
+.turn-telltales {
+  position: absolute;
+  left: 50%;
+  transform: translateX(-50%);
+  bottom: calc(38vh * 0.58 - clamp(1.5rem, 4.25vw, 1.68rem));
+  display: flex;
+  flex-direction: row;
+  align-items: center;
+  justify-content: center;
+  gap: clamp(1.25rem, 3.5vw, 2.75rem);
+  z-index: 21;
+  pointer-events: none;
+}
+
+.turn-telltale {
+  box-sizing: border-box;
+  min-width: clamp(5.75rem, 30vw, 7rem);
+  min-height: clamp(3rem, 8.5vw, 3.35rem);
+  height: auto;
+  padding: 0.45rem 0.75rem;
+  border-radius: 0.45rem;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 0.4rem;
+  font-family: var(--dash-label-font);
+  font-weight: 800;
+  font-size: var(--dash-label-size);
+  letter-spacing: 0.12em;
+  border: 2px solid rgba(95, 100, 118, 0.85);
+  background: rgba(28, 30, 38, 0.95);
+  color: rgba(140, 145, 160, 0.95);
+  box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.06);
+  transition:
+    background 0.06s ease,
+    color 0.06s ease,
+    border-color 0.06s ease,
+    box-shadow 0.06s ease;
+}
+
+.turn-telltale__arrow {
+  font-size: clamp(1.25rem, 4.5vw, 1.5rem);
+  line-height: 1;
+  opacity: 0.88;
+}
+
+.turn-telltale[data-phase="lit"] {
+  background: linear-gradient(180deg, #ffe082 0%, #ff9800 45%, #f57c00 100%);
+  color: #1a0f00;
+  border-color: #fff8e1;
+  box-shadow:
+    0 0 14px rgba(255, 193, 7, 1),
+    0 0 32px rgba(255, 152, 0, 0.65),
+    inset 0 1px 0 rgba(255, 255, 255, 0.45);
+}
+
+.turn-telltale[data-phase="lit"] .turn-telltale__arrow {
+  opacity: 1;
+}
+
+.turn-telltale[data-phase="dim"] {
+  background: rgba(55, 40, 12, 0.92);
+  color: rgba(140, 110, 45, 0.75);
+  border-color: rgba(120, 90, 35, 0.55);
+  box-shadow: none;
+}
+
+.turn-telltale[data-phase="dim"] .turn-telltale__arrow {
+  opacity: 0.45;
+}
+
 #ui {
   position: absolute;
   top: 1.2rem;
@@ -111,35 +183,35 @@ html, body {
 #hud {
   margin-top: 0.8rem;
   display: inline-flex;
-  gap: 0.75rem;
-  padding: 0.55rem 0.75rem;
+  gap: 0.85rem;
+  padding: 0.65rem 0.95rem;
   background: var(--hud-bg);
   border-radius: 999px;
   border: 1px solid var(--hud-border);
   backdrop-filter: blur(18px);
   box-shadow: 0 0 22px var(--hud-glow);
-  font-size: 0.8rem;
+  font-size: 1.05rem;
 }
 
 .hud-section {
   display: flex;
   align-items: center;
-  gap: 0.3rem;
-  padding: 0.15rem 0.55rem;
+  gap: 0.35rem;
+  padding: 0.2rem 0.65rem;
   border-radius: 999px;
   background: radial-gradient(circle at top left, rgba(60, 87, 255, 0.4), rgba(6, 10, 25, 0.9));
 }
 
 .label {
-  font-size: 0.72rem;
+  font-size: 0.95rem;
   text-transform: uppercase;
-  letter-spacing: 0.13em;
+  letter-spacing: 0.12em;
   color: var(--hud-label);
 }
 
-#modeLabel { color: var(--mode-label); font-weight: 600; }
-#statusLabel { color: var(--status-label); }
-#speedLabel { min-width: 4rem; text-align: right; }
+#modeLabel { color: var(--mode-label); font-weight: 700; font-size: 1.05rem; }
+#statusLabel { color: var(--status-label); font-size: 1.05rem; }
+#speedLabel { min-width: 4.5rem; text-align: right; font-size: 1.05rem; font-weight: 600; }
 
 /* ======================================
    STEERING WHEEL
@@ -159,10 +231,11 @@ html, body {
 }
 
 .steering-wheel-caption {
-  font-size: 0.65rem;
-  font-weight: 600;
+  font-family: var(--dash-label-font);
+  font-size: var(--dash-label-size);
+  font-weight: 800;
   text-transform: uppercase;
-  letter-spacing: 0.14em;
+  letter-spacing: 0.12em;
   color: rgba(230, 244, 255, 0.96);
   text-shadow:
     0 0 4px var(--text-glow),
@@ -178,23 +251,38 @@ html, body {
   width: 100%;
   height: 100%;
   border-radius: 50%;
-  border: 10px solid var(--steering-border);
-  background: var(--steering-bg);
-  box-shadow:
-    0 4px 14px var(--steering-shadow),
-    inset 0 0 16px rgba(0,0,0,0.72);
+  border: 10px solid var(--mode-label);
   position: relative;
   transform-origin: 50% 65%;
   transform: translateY(-1.25rem) rotate(0deg);
   transition: transform 0.09s ease-out;
+  background: radial-gradient(
+    circle at 32% 12%,
+    color-mix(in srgb, var(--mode-label) 26%, #3d4555),
+    #1a1d28 52%,
+    #080a10 88%
+  );
+  box-shadow:
+    0 0 14px color-mix(in srgb, var(--mode-label) 75%, transparent),
+    0 0 32px color-mix(in srgb, var(--mode-label) 48%, transparent),
+    0 0 48px color-mix(in srgb, var(--mode-label) 22%, transparent),
+    0 4px 14px var(--steering-shadow),
+    inset 0 0 16px rgba(0, 0, 0, 0.72);
 }
 
 #steering-center {
   position: absolute;
   inset: 45%;
   border-radius: 50%;
-  background: var(--steering-inner-gradient);
-  box-shadow: inset 0 0 10px rgba(0,0,0,0.75);
+  background: radial-gradient(
+    circle at 30% 10%,
+    color-mix(in srgb, var(--mode-label) 38%, #c4ccd4),
+    #4a5058 42%,
+    #1a1e22 100%
+  );
+  box-shadow:
+    inset 0 0 10px rgba(0, 0, 0, 0.75),
+    0 0 16px color-mix(in srgb, var(--mode-label) 48%, transparent);
 }
 
 #steering-wheel::before,
@@ -204,8 +292,14 @@ html, body {
   left: 50%;
   width: 4px;
   height: 42%;
-  background: var(--steering-crossbar);
   transform-origin: center bottom;
+  border-radius: 2px;
+  background: linear-gradient(
+    to bottom,
+    var(--mode-label),
+    color-mix(in srgb, var(--mode-label) 32%, #263238)
+  );
+  box-shadow: 0 0 10px color-mix(in srgb, var(--mode-label) 58%, transparent);
 }
 
 #steering-wheel::before { top: 10%; transform: translateX(-50%); }
