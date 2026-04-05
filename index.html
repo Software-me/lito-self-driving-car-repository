@@ -29,6 +29,17 @@
     <!-- 2D overlay: dashboard + speedometer (drawn in js/main.js) -->
     <canvas id="dash"></canvas>
 
+    <div id="turn-telltales" class="turn-telltales" aria-live="polite">
+      <div class="turn-telltale" id="telltale-left" data-phase="off" title="Left turn signal">
+        <span class="turn-telltale__arrow" aria-hidden="true">◀</span>
+        <span class="turn-telltale__label">LEFT</span>
+      </div>
+      <div class="turn-telltale" id="telltale-right" data-phase="off" title="Right turn signal">
+        <span class="turn-telltale__label">RIGHT</span>
+        <span class="turn-telltale__arrow" aria-hidden="true">▶</span>
+      </div>
+    </div>
+
     <div id="steering-wheel-container">
       <span id="steering-wheel-label" class="steering-wheel-caption">Steering wheel</span>
       <div id="steering-wheel" role="img" aria-label="Steering wheel">
