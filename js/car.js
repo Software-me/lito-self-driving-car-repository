@@ -23,6 +23,28 @@ export function toggleAutonomous() {
   autonomous = !autonomous;
 }
 
+const TURN_SIGNAL_BLINK_MS = 480;
+
+function turnSignalBlinkPhase(nowMs) {
+  return Math.floor(nowMs / TURN_SIGNAL_BLINK_MS) % 2 === 0 ? "lit" : "dim";
+}
+
+/** Dashboard left telltale: blinking during left signal + lane change (autonomous). */
+export function getLeftTurnSignalPhase(nowMs) {
+  if (!autonomous) return "off";
+  if (lanePhase !== "signal_left_after_green" && lanePhase !== "changing_lane_left") return "off";
+  return turnSignalBlinkPhase(nowMs);
+}
+
+/** Dashboard right telltale: blinking before / during lane change for stranded pass (autonomous). */
+export function getRightTurnSignalPhase(nowMs) {
+  if (!autonomous) return "off";
+  if (lanePhase !== "signal_right_for_stranded" && lanePhase !== "changing_lane_right_for_stranded") {
+    return "off";
+  }
+  return turnSignalBlinkPhase(nowMs);
+}
+
 export function buildCar() {
   const THREE = globalThis.THREE;
   const bodyMat = new THREE.MeshStandardMaterial({
