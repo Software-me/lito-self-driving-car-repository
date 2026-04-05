@@ -3,6 +3,7 @@
  * Vehicle + environment live in car.js, road.js, traffic.js, sensor.js, config.js.
  */
 import { world as W } from "./world.js";
+import * as C from "./config.js";
 import * as road from "./road.js";
 import * as traffic from "./traffic.js";
 import * as car from "./car.js";
@@ -10,6 +11,8 @@ import * as car from "./car.js";
 let lastTime = performance.now();
 
 const hud = {};
+let telltaleLeftEl = null;
+let telltaleRightEl = null;
 
 function buildLights() {
   const THREE = globalThis.THREE;
@@ -46,6 +49,13 @@ function onKeyUp(e) {
   if (e.code === "ArrowLeft" || e.code === "KeyA" || e.code === "ArrowRight" || e.code === "KeyD") {
     car.controls.steerInput = 0;
   }
+}
+
+/** DOM turn telltales sit above #dash (z-index 21); canvas was hidden behind steering (z 20). */
+function updateTurnTelltales(nowMs) {
+  if (!telltaleLeftEl || !telltaleRightEl) return;
+  telltaleLeftEl.dataset.phase = car.getLeftTurnSignalPhase(nowMs);
+  telltaleRightEl.dataset.phase = car.getRightTurnSignalPhase(nowMs);
 }
 
 function drawDash() {
@@ -119,22 +129,42 @@ function resetScene() {
 }
 
 function loop(now) {
-  const dt = Math.min((now - lastTime) / 1000, 0.08);
-  lastTime = now;
+  const t = typeof now === "number" && Number.isFinite(now) ? now : performance.now();
+  const dt = Math.min((t - lastTime) / 1000, 0.08);
+  lastTime = t;
 
   try {
     car.updateVehicle(dt, hud);
+  } catch (err) {
+    console.error("updateVehicle:", err);
+    if (hud.statusLabel) hud.statusLabel.textContent = "Sim error — see console (F12)";
+  }
+
+  try {
     if (W.strandedHazardLights && W.strandedHazardLights.length) {
-      const flashOn = Math.floor(now / 330) % 2 === 0;
+      const flashOn = Math.floor(t / 330) % 2 === 0;
       W.strandedHazardLights.forEach((mesh) => {
         mesh.visible = flashOn;
       });
     }
-    W.renderer.render(W.scene, W.camera);
+    if (W.renderer && W.scene && W.camera) {
+      W.renderer.render(W.scene, W.camera);
+    }
+  } catch (err) {
+    console.error("render:", err);
+    if (hud.statusLabel) hud.statusLabel.textContent = "Render error — see console (F12)";
+  }
+
+  try {
     drawDash();
   } catch (err) {
-    console.error(err);
-    if (hud.statusLabel) hud.statusLabel.textContent = "Render error — see console (F12)";
+    console.error("drawDash:", err);
+  }
+
+  try {
+    updateTurnTelltales(t);
+  } catch (err) {
+    console.warn("telltales:", err);
   }
 
   requestAnimationFrame(loop);
@@ -155,9 +185,9 @@ function init() {
 
   W.scene = new THREE.Scene();
   W.scene.background = new THREE.Color(0x1a2332);
-  W.scene.fog = new THREE.Fog(0x1a2332, 90, 520);
+  W.scene.fog = new THREE.Fog(0x1a2332, C.FOG_NEAR, C.FOG_FAR);
 
-  W.camera = new THREE.PerspectiveCamera(68, window.innerWidth / window.innerHeight, 0.1, 500);
+  W.camera = new THREE.PerspectiveCamera(68, window.innerWidth / window.innerHeight, 0.1, C.CAMERA_FAR);
 
   buildLights();
   road.buildRoad();
@@ -175,6 +205,8 @@ function init() {
   hud.speedLabel = document.getElementById("speedLabel");
   hud.statusLabel = document.getElementById("statusLabel");
   hud.steeringWheel = document.getElementById("steering-wheel");
+  telltaleLeftEl = document.getElementById("telltale-left");
+  telltaleRightEl = document.getElementById("telltale-right");
 
   const toggleBtn = document.getElementById("toggleModeBtn");
   if (toggleBtn) {
@@ -210,4 +242,3 @@ if (document.readyState === "loading") {
 } else {
   boot();
 }
-
