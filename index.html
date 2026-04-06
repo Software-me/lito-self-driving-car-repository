@@ -1,0 +1,83 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta
+      name="viewport"
+      content="width=device-width, initial-scale=1.0, viewport-fit=cover"
+    />
+    <title>Lito 3D Self-Driving Car Simulator</title>
+    <link rel="stylesheet" href="style.css" />
+  </head>
+  <body>
+    <div id="ui">
+      <div id="title">Lito 3D Self-Driving Car (Driver View)</div>
+      <div id="hud">
+        <div class="hud-section">
+          <span class="label">Mode:</span>
+          <span id="modeLabel">Autonomous</span>
+        </div>
+        <div class="hud-section">
+          <span class="label">Speed:</span>
+          <span id="speedLabel">0.0 m/s</span>
+        </div>
+        <div class="hud-section">
+          <span class="label">Status:</span>
+          <span id="statusLabel">Following lane</span>
+        </div>
+      </div>
+    </div>
+
+    <canvas id="view"></canvas>
+    <!-- 2D overlay: dashboard + speedometer (drawn in js/main.js) -->
+    <canvas id="dash"></canvas>
+
+    <div id="turn-telltales" class="turn-telltales" aria-live="polite">
+      <div class="turn-telltale" id="telltale-left" data-phase="off" title="Left turn signal">
+        <span class="turn-telltale__arrow" aria-hidden="true">◀</span>
+        <span class="turn-telltale__label">LEFT</span>
+      </div>
+      <div class="turn-telltale" id="telltale-right" data-phase="off" title="Right turn signal">
+        <span class="turn-telltale__label">RIGHT</span>
+        <span class="turn-telltale__arrow" aria-hidden="true">▶</span>
+      </div>
+    </div>
+
+    <div id="steering-wheel-container">
+      <span id="steering-wheel-label" class="steering-wheel-caption">Steering wheel</span>
+      <div id="steering-wheel" role="img" aria-label="Steering wheel">
+        <div id="steering-center"></div>
+      </div>
+    </div>
+
+    <div id="controls-panel">
+      <button id="toggleModeBtn" type="button">Toggle Manual / Auto</button>
+      <button id="resetBtn" type="button">Reset Scene</button>
+    </div>
+
+    <!-- Manual driving on phones/tablets (no keyboard); pointer events mirror car.controls -->
+    <div id="touch-controls" class="touch-controls">
+      <div class="touch-controls__group touch-controls__steer">
+        <button type="button" class="touch-btn" id="touchSteerLeft" aria-label="Steer left">
+          ◀
+        </button>
+        <button type="button" class="touch-btn" id="touchSteerRight" aria-label="Steer right">
+          ▶
+        </button>
+      </div>
+      <div class="touch-controls__group touch-controls__pedals">
+        <button type="button" class="touch-btn touch-btn--pedal" id="touchBrake" aria-label="Brake">
+          Brake
+        </button>
+        <button type="button" class="touch-btn touch-btn--pedal" id="touchGas" aria-label="Accelerate">
+          Gas
+        </button>
+      </div>
+    </div>
+
+    <!-- Three.js global, then ES module app (needs http:// server, not file://) -->
+    <script src="https://cdn.jsdelivr.net/npm/three@0.160.0/build/three.min.js"></script>
+    <script type="module" src="js/main.js"></script>
+  </body>
+</html>
+
