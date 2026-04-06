@@ -2,7 +2,10 @@
 <html lang="en">
   <head>
     <meta charset="UTF-8" />
-    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <meta
+      name="viewport"
+      content="width=device-width, initial-scale=1.0, viewport-fit=cover"
+    />
     <title>Lito 3D Self-Driving Car Simulator</title>
     <link rel="stylesheet" href="style.css" />
   </head>
@@ -48,8 +51,28 @@
     </div>
 
     <div id="controls-panel">
-      <button id="toggleModeBtn">Toggle Manual / Auto</button>
-      <button id="resetBtn">Reset Scene</button>
+      <button id="toggleModeBtn" type="button">Toggle Manual / Auto</button>
+      <button id="resetBtn" type="button">Reset Scene</button>
+    </div>
+
+    <!-- Manual driving on phones/tablets (no keyboard); pointer events mirror car.controls -->
+    <div id="touch-controls" class="touch-controls">
+      <div class="touch-controls__group touch-controls__steer">
+        <button type="button" class="touch-btn" id="touchSteerLeft" aria-label="Steer left">
+          ◀
+        </button>
+        <button type="button" class="touch-btn" id="touchSteerRight" aria-label="Steer right">
+          ▶
+        </button>
+      </div>
+      <div class="touch-controls__group touch-controls__pedals">
+        <button type="button" class="touch-btn touch-btn--pedal" id="touchBrake" aria-label="Brake">
+          Brake
+        </button>
+        <button type="button" class="touch-btn touch-btn--pedal" id="touchGas" aria-label="Accelerate">
+          Gas
+        </button>
+      </div>
     </div>
 
     <!-- Three.js global, then ES module app (needs http:// server, not file://) -->
