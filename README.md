@@ -59,3 +59,9 @@ This project is designed as a **shippable intermediate toward autonomous systems
 ### Architecture
 
 The project is built using a **modular ES module structure**:
+---
+A real-time 3D autonomous driving simulator built with Three.js. 
+Features: - FSM-based autonomous behavior - 
+Traffic light detection and response - Lane changing and hazard avoidance - 
+Mobile touch controls - Real-time dashboard UI Live Demo:
+https://youtu.be/AitkL__Vudg
