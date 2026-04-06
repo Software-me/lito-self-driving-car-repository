@@ -1,14 +1,22 @@
-# 3D Autonomous Driving Simulator (Driver View)
+= 3D Autonomous Driving Simulator (Driver View)
 
-## Live Demo
-👉 https://your-username.github.io/lito-self-driving-car/
-
-## Demo Video
-👉 (Paste your video link here)
+== Live Demo
+https://software-me.github.io/lito-self-driving-car-repository/
 
 ---
 
-## Overview
+== YouTube Demo Video
+
+A real-time 3D autonomous driving simulator built with Three.js. 
+Features: - FSM-based autonomous behavior - 
+Traffic light detection and response - Lane changing and hazard avoidance - 
+Mobile touch controls - Real-time dashboard UI Live Demo:
+https://youtu.be/AitkL__Vudg
+
+
+---
+
+== Overview
 
 This project is a **real-time 3D autonomous driving simulator** built with **Three.js**, featuring a driver-perspective view, interactive controls, and modular system design.
 
@@ -18,9 +26,9 @@ This project is designed as a **shippable intermediate toward autonomous systems
 
 ---
 
-## Features
+== Features
 
-### Autonomous Driving Behavior
+=== Autonomous Driving Behavior
 - Finite State Machine (FSM) for vehicle decision-making  
 - Traffic light detection and response (stop → wait → go)  
 - Lane change after traffic light  
@@ -29,7 +37,7 @@ This project is designed as a **shippable intermediate toward autonomous systems
 
 ---
 
-### Manual & Mobile Controls
+=== Manual & Mobile Controls
 - Keyboard controls (W/A/S/D or arrow keys)  
 - **Touch controls for mobile devices**:
   - Gas  
@@ -39,7 +47,7 @@ This project is designed as a **shippable intermediate toward autonomous systems
 
 ---
 
-### Road & Environment
+=== Road & Environment
 - Procedural road generation with lane markings  
 - Four-way intersection system  
 - Dynamic traffic lights (red / yellow / green)  
@@ -48,7 +56,7 @@ This project is designed as a **shippable intermediate toward autonomous systems
 
 ---
 
-### Driver HUD (UI)
+=== Driver HUD (UI)
 - Real-time speed display (m/s and km/h)  
 - Status messages (traffic, lane change, hazard detection)  
 - Steering wheel animation synchronized with vehicle behavior  
@@ -56,12 +64,7 @@ This project is designed as a **shippable intermediate toward autonomous systems
 
 ---
 
-### Architecture
+=== Architecture
 
 The project is built using a **modular ES module structure**:
----
-A real-time 3D autonomous driving simulator built with Three.js. 
-Features: - FSM-based autonomous behavior - 
-Traffic light detection and response - Lane changing and hazard avoidance - 
-Mobile touch controls - Real-time dashboard UI Live Demo:
-https://youtu.be/AitkL__Vudg
+
