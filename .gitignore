@@ -1,5 +1,8 @@
 style.css.bak
 
+# Local demos — not part of the published project
+typewriter-demo*.html
+
 .DS_Store
 Thumbs.db
 *.log

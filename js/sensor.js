@@ -20,3 +20,11 @@ export function shouldStartLightApproach(carZ, trafficLightPassed) {
 export function shouldStartStrandedSequence(carZ, strandedCarPassed) {
   return !strandedCarPassed && carZ < C.STRANDED_APPROACH_Z;
 }
+
+/**
+ * Longitudinal distance (m) to the stranded vehicle ahead in the left lane.
+ * Positive while approaching from behind; ≤0 once the ego passes its Z.
+ */
+export function distanceToStrandedCarAhead(carZ) {
+  return carZ - C.STRANDED_CAR_Z;
+}

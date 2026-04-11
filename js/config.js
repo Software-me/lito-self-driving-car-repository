@@ -27,3 +27,5 @@ export const LIGHT_APPROACH_Z = -40;
 
 export const STRANDED_CAR_Z = -326.75;
 export const STRANDED_APPROACH_Z = -256.75;
+/** Within this range (m), cruise speed is reduced toward the stranded car (same idea as traffic stop). */
+export const STRANDED_FORWARD_SLOW_RADIUS_M = 92;
