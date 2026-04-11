@@ -19,6 +19,7 @@ export const world = {
   intersectionGroup: null,
   strandedCarGroup: null,
   strandedHazardLights: [],
+  obstacleCarGroup: null,
   dashCanvas: null,
   dashCtx: null,
 };

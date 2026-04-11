@@ -2,7 +2,11 @@
 import { world as W } from "./world.js";
 import * as C from "./config.js";
 import * as sensor from "./sensor.js";
-import { setTrafficBulbVisuals, syncTrafficLightWorldPosition } from "./traffic.js";
+import {
+  setTrafficBulbVisuals,
+  syncTrafficLightWorldPosition,
+  setObstacleCarVisible,
+} from "./traffic.js";
 import { updateDashLineScroll } from "./road.js";
 
 export let autonomous = true;
@@ -18,6 +22,10 @@ let lanePhaseTimer = 0;
 let laneChangeElapsed = 0;
 let trafficLightPassed = false;
 let strandedCarPassed = false;
+/** After stranded pass: counts up in right_lane until obstacle spawns. */
+let postStrandedObstacleTimer = 0;
+let obstacleActive = false;
+let obstacleAvoidanceComplete = false;
 
 export function toggleAutonomous() {
   autonomous = !autonomous;
@@ -32,14 +40,26 @@ function turnSignalBlinkPhase(nowMs) {
 /** Dashboard left telltale: blinking during left signal + lane change (autonomous). */
 export function getLeftTurnSignalPhase(nowMs) {
   if (!autonomous) return "off";
-  if (lanePhase !== "signal_left_after_green" && lanePhase !== "changing_lane_left") return "off";
+  if (
+    lanePhase !== "signal_left_after_green" &&
+    lanePhase !== "changing_lane_left" &&
+    lanePhase !== "signal_left_obstacle" &&
+    lanePhase !== "changing_lane_left_obstacle"
+  ) {
+    return "off";
+  }
   return turnSignalBlinkPhase(nowMs);
 }
 
 /** Dashboard right telltale: blinking before / during lane change for stranded pass (autonomous). */
 export function getRightTurnSignalPhase(nowMs) {
   if (!autonomous) return "off";
-  if (lanePhase !== "signal_right_for_stranded" && lanePhase !== "changing_lane_right_for_stranded") {
+  if (
+    lanePhase !== "signal_right_for_stranded" &&
+    lanePhase !== "changing_lane_right_for_stranded" &&
+    lanePhase !== "signal_right_obstacle" &&
+    lanePhase !== "changing_lane_right_obstacle"
+  ) {
     return "off";
   }
   return turnSignalBlinkPhase(nowMs);
@@ -84,6 +104,10 @@ export function resetVehicleState() {
   laneChangeElapsed = 0;
   trafficLightPassed = false;
   strandedCarPassed = false;
+  postStrandedObstacleTimer = 0;
+  obstacleActive = false;
+  obstacleAvoidanceComplete = false;
+  setObstacleCarVisible(false);
 }
 
 /**
@@ -107,7 +131,12 @@ export function updateVehicle(dt, hud) {
 
   let targetSteer = 0;
   if (autonomous) {
-    if (lanePhase === "changing_lane_left" || lanePhase === "changing_lane_right_for_stranded") {
+    if (
+      lanePhase === "changing_lane_left" ||
+      lanePhase === "changing_lane_right_for_stranded" ||
+      lanePhase === "changing_lane_left_obstacle" ||
+      lanePhase === "changing_lane_right_obstacle"
+    ) {
       laneChangeElapsed += dt;
     } else {
       laneChangeElapsed = 0;
@@ -118,9 +147,70 @@ export function updateVehicle(dt, hud) {
     if (lanePhase === "right_lane") {
       targetSteer = 0;
       W.car.position.x = C.RIGHT_LANE_X;
+      if (strandedCarPassed && !obstacleAvoidanceComplete) {
+        postStrandedObstacleTimer += dt;
+        if (postStrandedObstacleTimer >= C.OBSTACLE_DELAY_AFTER_STRANDED_S && !obstacleActive) {
+          obstacleActive = true;
+          setObstacleCarVisible(true);
+        }
+      }
+      if (obstacleActive && !obstacleAvoidanceComplete) {
+        const distObs = sensor.distanceToObstacleAhead(z);
+        const approachingObs = distObs > 0;
+        if (approachingObs && distObs < C.OBSTACLE_FORWARD_SLOW_RADIUS_M) {
+          targetSpeed = Math.min(targetSpeed, Math.max(0, distObs * 0.85));
+        }
+        const blockedObs = approachingObs && distObs < C.OBSTACLE_BLOCK_THRESHOLD_M;
+        if (blockedObs) {
+          lanePhase = "signal_left_obstacle";
+          lanePhaseTimer = 0;
+        }
+      }
       if (sensor.shouldStartLightApproach(z, trafficLightPassed)) {
         lanePhase = "traffic_approach";
         lanePhaseTimer = 0;
+      }
+    } else if (lanePhase === "signal_left_obstacle") {
+      targetSteer = 0;
+      W.car.position.x = C.RIGHT_LANE_X;
+      if (lanePhaseTimer > 2.5) {
+        lanePhase = "changing_lane_left_obstacle";
+        lanePhaseTimer = 0;
+      }
+    } else if (lanePhase === "changing_lane_left_obstacle") {
+      targetSteer = 0;
+      const changeDuration = 2.2;
+      const t = Math.min(1, laneChangeElapsed / changeDuration);
+      W.car.position.x = C.RIGHT_LANE_X + (C.LEFT_LANE_X - C.RIGHT_LANE_X) * t;
+      if (t >= 1) {
+        lanePhase = "left_lane_obstacle";
+        lanePhaseTimer = 0;
+        laneChangeElapsed = 0;
+      }
+    } else if (lanePhase === "left_lane_obstacle") {
+      targetSteer = 0;
+      W.car.position.x = C.LEFT_LANE_X;
+      if (z < C.OBSTACLE_CAR_Z - C.OBSTACLE_PASS_CLEAR_M) {
+        lanePhase = "signal_right_obstacle";
+        lanePhaseTimer = 0;
+      }
+    } else if (lanePhase === "signal_right_obstacle") {
+      targetSteer = 0;
+      W.car.position.x = C.LEFT_LANE_X;
+      if (lanePhaseTimer > 2.5) {
+        lanePhase = "changing_lane_right_obstacle";
+        lanePhaseTimer = 0;
+      }
+    } else if (lanePhase === "changing_lane_right_obstacle") {
+      targetSteer = 0;
+      const changeDuration = 2.2;
+      const t = Math.min(1, laneChangeElapsed / changeDuration);
+      W.car.position.x = C.LEFT_LANE_X + (C.RIGHT_LANE_X - C.LEFT_LANE_X) * t;
+      if (t >= 1) {
+        lanePhase = "right_lane";
+        lanePhaseTimer = 0;
+        laneChangeElapsed = 0;
+        obstacleAvoidanceComplete = true;
       }
     } else if (lanePhase === "traffic_approach") {
       const distBeforeStop = sensor.distanceBeforeTrafficStop(z);
@@ -202,6 +292,7 @@ export function updateVehicle(dt, hud) {
         lanePhaseTimer = 0;
         laneChangeElapsed = 0;
         strandedCarPassed = true;
+        postStrandedObstacleTimer = 0;
       }
     }
   } else {
@@ -220,9 +311,12 @@ export function updateVehicle(dt, hud) {
   if (
     autonomous &&
     (lanePhase === "left_lane" ||
+      lanePhase === "left_lane_obstacle" ||
       lanePhase === "right_lane" ||
       lanePhase === "changing_lane_left" ||
-      lanePhase === "changing_lane_right_for_stranded")
+      lanePhase === "changing_lane_right_for_stranded" ||
+      lanePhase === "changing_lane_left_obstacle" ||
+      lanePhase === "changing_lane_right_obstacle")
   ) {
     steering += (0 - steering) * Math.min(1, 7 * dt);
   }
@@ -231,14 +325,17 @@ export function updateVehicle(dt, hud) {
   const fwd = sensor.forwardFromYaw(yaw);
   const inLaneChange =
     autonomous &&
-    (lanePhase === "changing_lane_left" || lanePhase === "changing_lane_right_for_stranded");
+    (lanePhase === "changing_lane_left" ||
+      lanePhase === "changing_lane_right_for_stranded" ||
+      lanePhase === "changing_lane_left_obstacle" ||
+      lanePhase === "changing_lane_right_obstacle");
   if (!inLaneChange) {
     W.car.position.x += fwd.x * speed * dt;
   }
   W.car.position.z += fwd.z * speed * dt;
   W.car.rotation.y += steering * dt;
 
-  if (autonomous && lanePhase === "left_lane") {
+  if (autonomous && (lanePhase === "left_lane" || lanePhase === "left_lane_obstacle")) {
     W.car.position.x = C.LEFT_LANE_X;
   }
 
@@ -276,7 +373,15 @@ export function updateVehicle(dt, hud) {
       const dz = sensor.distanceToStrandedCarAhead(W.car.position.z);
       if (dz > 0 && dz < C.STRANDED_FORWARD_SLOW_RADIUS_M) status = "Slowing — vehicle ahead (sensor)";
     } else if (lanePhase === "changing_lane_right_for_stranded") status = "Changing lane right — avoiding stranded car";
-    else if (lanePhase === "traffic_approach") status = "Approaching red traffic light";
+    else if (lanePhase === "signal_left_obstacle") status = "Left signal — obstacle in lane";
+    else if (lanePhase === "changing_lane_left_obstacle") status = "Changing lane left — avoiding obstacle";
+    else if (lanePhase === "left_lane_obstacle") status = "Passing obstacle (left lane)";
+    else if (lanePhase === "signal_right_obstacle") status = "Right signal — merge back";
+    else if (lanePhase === "changing_lane_right_obstacle") status = "Merging right — obstacle clear";
+    else if (lanePhase === "right_lane" && obstacleActive && !obstacleAvoidanceComplete) {
+      const dObs = sensor.distanceToObstacleAhead(W.car.position.z);
+      if (dObs > 0 && dObs < C.OBSTACLE_FORWARD_SLOW_RADIUS_M) status = "Slowing — obstacle ahead (sensor)";
+    } else if (lanePhase === "traffic_approach") status = "Approaching red traffic light";
     else if (lanePhase === "traffic_wait" && lanePhaseTimer <= 2.4) status = "Stopped — red light";
     else if (lanePhase === "traffic_wait") status = "Green light — proceeding";
     hud.statusLabel.textContent = status;
@@ -293,6 +398,12 @@ export function updateVehicle(dt, hud) {
       const t = Math.min(1, laneChangeElapsed / changeDuration);
       wheelExtraDeg = -55 * Math.sin(Math.PI * t);
     } else if (lanePhase === "changing_lane_right_for_stranded") {
+      const t = Math.min(1, laneChangeElapsed / changeDuration);
+      wheelExtraDeg = 55 * Math.sin(Math.PI * t);
+    } else if (lanePhase === "changing_lane_left_obstacle") {
+      const t = Math.min(1, laneChangeElapsed / changeDuration);
+      wheelExtraDeg = -55 * Math.sin(Math.PI * t);
+    } else if (lanePhase === "changing_lane_right_obstacle") {
       const t = Math.min(1, laneChangeElapsed / changeDuration);
       wheelExtraDeg = 55 * Math.sin(Math.PI * t);
     }

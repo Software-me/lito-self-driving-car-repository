@@ -247,6 +247,7 @@ function init() {
   road.buildScenery();
   traffic.buildTrafficLight();
   traffic.buildStrandedCar();
+  traffic.buildObstacleCar();
   car.buildCar();
 
   W.dashCanvas = document.getElementById("dash");

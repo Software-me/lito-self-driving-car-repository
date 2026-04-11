@@ -24,3 +24,8 @@ export function shouldStartLightApproach(carZ, trafficLightPassed) {
 export function distanceToStrandedCarAhead(carZ) {
   return carZ - C.STRANDED_CAR_Z;
 }
+
+/** Longitudinal distance (m) to the right-lane obstacle when it is active (same sign convention as stranded). */
+export function distanceToObstacleAhead(carZ) {
+  return carZ - C.OBSTACLE_CAR_Z;
+}

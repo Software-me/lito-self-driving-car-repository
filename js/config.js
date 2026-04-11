@@ -30,3 +30,12 @@ export const STRANDED_CAR_Z = -326.75;
 export const BLOCK_THRESHOLD = 70;
 /** Within this range (m), cruise speed is reduced toward the stranded car (same idea as traffic stop). */
 export const STRANDED_FORWARD_SLOW_RADIUS_M = 92;
+
+/** Right-lane obstacle (appears after OBSTACLE_DELAY_AFTER_STRANDED_S); ego avoids by sensing + lane change. */
+export const OBSTACLE_CAR_Z = -478;
+/** Seconds after stranded pass completes before obstacle becomes visible + sensed. */
+export const OBSTACLE_DELAY_AFTER_STRANDED_S = 5;
+export const OBSTACLE_BLOCK_THRESHOLD_M = 70;
+export const OBSTACLE_FORWARD_SLOW_RADIUS_M = 92;
+/** Ego z must be this far past OBSTACLE_CAR_Z before returning to right lane. */
+export const OBSTACLE_PASS_CLEAR_M = 14;

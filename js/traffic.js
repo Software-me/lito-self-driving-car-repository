@@ -107,6 +107,32 @@ export function buildStrandedCar() {
   W.strandedCarGroup = g;
 }
 
+/** Debris-style obstacle in the right lane; shown after post-stranded delay (see car FSM). */
+export function buildObstacleCar() {
+  const THREE = globalThis.THREE;
+  const g = new THREE.Group();
+  const bodyMat = new THREE.MeshStandardMaterial({
+    color: 0xc62828,
+    metalness: 0.35,
+    roughness: 0.55,
+  });
+  const body = new THREE.Mesh(new THREE.BoxGeometry(1.2, 0.5, 2.4), bodyMat);
+  body.position.y = 0.5;
+  const coneMat = new THREE.MeshStandardMaterial({ color: 0xff6f00, metalness: 0.2, roughness: 0.6 });
+  const cone = new THREE.Mesh(new THREE.ConeGeometry(0.35, 0.75, 8), coneMat);
+  cone.position.set(0.45, 0.85, 0.2);
+  cone.rotation.z = Math.PI * 0.15;
+  g.add(body, cone);
+  g.position.set(C.RIGHT_LANE_X, 0, C.OBSTACLE_CAR_Z);
+  g.visible = false;
+  W.scene.add(g);
+  W.obstacleCarGroup = g;
+}
+
+export function setObstacleCarVisible(visible) {
+  if (W.obstacleCarGroup) W.obstacleCarGroup.visible = !!visible;
+}
+
 export function syncTrafficLightWorldPosition() {
   if (!W.trafficLightGroup) return;
   W.trafficLightGroup.position.set(0, 0, 0);
@@ -143,4 +169,5 @@ export function setTrafficBulbVisuals(state) {
 export function resetTrafficVisuals() {
   syncTrafficLightWorldPosition();
   setTrafficBulbVisuals("red");
+  setObstacleCarVisible(false);
 }
