@@ -176,10 +176,12 @@ export function updateVehicle(dt, hud) {
       targetSteer = 0;
       W.car.position.x = C.LEFT_LANE_X;
       const distStranded = sensor.distanceToStrandedCarAhead(z);
-      if (distStranded > 0 && distStranded < C.STRANDED_FORWARD_SLOW_RADIUS_M) {
+      const approaching = distStranded > 0;
+      if (approaching && distStranded < C.STRANDED_FORWARD_SLOW_RADIUS_M) {
         targetSpeed = Math.min(targetSpeed, Math.max(0, distStranded * 0.85));
       }
-      if (sensor.shouldStartStrandedSequence(z, strandedCarPassed)) {
+      const blocked = approaching && distStranded < C.BLOCK_THRESHOLD;
+      if (!strandedCarPassed && blocked) {
         lanePhase = "signal_right_for_stranded";
         lanePhaseTimer = 0;
       }
@@ -270,9 +272,9 @@ export function updateVehicle(dt, hud) {
     else if (lanePhase === "signal_left_after_green") status = "Left turn signal";
     else if (lanePhase === "changing_lane_left") status = "Changing lane left";
     else if (lanePhase === "signal_right_for_stranded") status = "Right turn signal — stranded car ahead";
-    else if (lanePhase === "left_lane" && sensor.distanceToStrandedCarAhead(W.car.position.z) > 0 &&
-      sensor.distanceToStrandedCarAhead(W.car.position.z) < C.STRANDED_FORWARD_SLOW_RADIUS_M) {
-      status = "Slowing — vehicle ahead (sensor)";
+    else if (lanePhase === "left_lane") {
+      const dz = sensor.distanceToStrandedCarAhead(W.car.position.z);
+      if (dz > 0 && dz < C.STRANDED_FORWARD_SLOW_RADIUS_M) status = "Slowing — vehicle ahead (sensor)";
     } else if (lanePhase === "changing_lane_right_for_stranded") status = "Changing lane right — avoiding stranded car";
     else if (lanePhase === "traffic_approach") status = "Approaching red traffic light";
     else if (lanePhase === "traffic_wait" && lanePhaseTimer <= 2.4) status = "Stopped — red light";
