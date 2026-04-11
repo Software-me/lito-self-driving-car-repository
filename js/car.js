@@ -157,9 +157,6 @@ export function updateVehicle(dt, hud) {
       if (obstacleActive && !obstacleAvoidanceComplete) {
         const distObs = sensor.distanceToObstacleAhead(z);
         const approachingObs = distObs > 0;
-        if (approachingObs && distObs < C.OBSTACLE_FORWARD_SLOW_RADIUS_M) {
-          targetSpeed = Math.min(targetSpeed, Math.max(0, distObs * 0.85));
-        }
         const blockedObs = approachingObs && distObs < C.OBSTACLE_BLOCK_THRESHOLD_M;
         if (blockedObs) {
           lanePhase = "signal_left_obstacle";
@@ -297,6 +294,15 @@ export function updateVehicle(dt, hud) {
     }
   } else {
     targetSteer = controls.steerInput * 0.9;
+  }
+
+  /* Obstacle cap must apply in every phase while still ahead of it — otherwise targetSpeed snaps
+   * back to cruise in signal/lane-change states and the speedometer stays flat. */
+  if (autonomous && obstacleActive && !obstacleAvoidanceComplete) {
+    const distObs = sensor.distanceToObstacleAhead(W.car.position.z);
+    if (distObs > 0 && distObs < C.OBSTACLE_FORWARD_SLOW_RADIUS_M) {
+      targetSpeed = Math.min(targetSpeed, Math.max(0, distObs * 0.85));
+    }
   }
 
   if (targetSpeed > speed) {
