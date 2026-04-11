@@ -301,7 +301,9 @@ export function updateVehicle(dt, hud) {
   if (autonomous && obstacleActive && !obstacleAvoidanceComplete) {
     const distObs = sensor.distanceToObstacleAhead(W.car.position.z);
     if (distObs > 0 && distObs < C.OBSTACLE_FORWARD_SLOW_RADIUS_M) {
-      targetSpeed = Math.min(targetSpeed, Math.max(0, distObs * 0.85));
+      const soft = distObs * 0.85;
+      const capped = Math.min(12, Math.max(C.OBSTACLE_MIN_CREEP_MPS, soft));
+      targetSpeed = Math.min(targetSpeed, capped);
     }
   }
 
