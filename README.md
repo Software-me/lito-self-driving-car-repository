@@ -1,14 +1,11 @@
 # 3D Autonomous Driving Simulator (Driver View)
 
 ## Live Demo
-
 👉 https://software-me.github.io/lito-self-driving-car-repository/
 
 ## Demo Video
-
-▶️ **[Watch on YouTube]([https://www.youtube.com/watch?v=AitkL__Vudg](https://youtu.be/2_xpX455byI))**
-
-[![Demo — click to play on YouTube](https://img.youtube.com/vi/AitkL__Vudg/hqdefault.jpg)](https://www.youtube.com/watch?v=AitkL__Vudg)
+▶️ **[Watch on YouTube](https://youtu.be/2_xpX455byI)**  
+[![Demo — click to play on YouTube](https://img.youtube.com/vi/2_xpX455byI/hqdefault.jpg)](https://youtu.be/2_xpX455byI)
 
 ---
 
