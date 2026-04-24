@@ -1,10 +1,10 @@
 # 3D Autonomous Driving Simulator (Driver View)
 
 ## Live Demo
-👉 https://software-me.github.io/lito-self-driving-car-repository/
+https://software-me.github.io/lito-self-driving-car-repository/
 
 ## Demo Video
-▶️ **[Watch on YouTube](https://youtu.be/2_xpX455byI)**  
+**[Watch on YouTube](https://youtu.be/2_xpX455byI)**  
 [![Demo — click to play on YouTube](https://img.youtube.com/vi/2_xpX455byI/hqdefault.jpg)](https://youtu.be/2_xpX455byI)
 
 ---
@@ -61,6 +61,41 @@ This project is designed as a **shippable intermediate toward autonomous systems
 
 ---
 
+## Decision System Upgrade
+
+This project was extended from a primarily rule-based system into a more reactive, decision-driven architecture for obstacle handling.
+
+### Previous Approach
+Obstacle avoidance was initially implemented using fixed thresholds and scripted transitions tied to environment positions. While effective for controlled scenarios, this approach limited adaptability.
+
+### Updated Approach
+A decision-based pipeline was introduced to improve realism and flexibility:
+
+**Detect → Decide → Act**
+
+- **Detect**: The system computes real-time distance to obstacles and determines whether the vehicle is approaching or blocked.  
+- **Decide**: A decision layer evaluates:
+  - Distance to the obstacle  
+  - Whether a safe lane change is possible  
+- **Act**: Based on the decision:
+  - The vehicle changes lanes when safe  
+  - Otherwise, it slows down dynamically until a safe maneuver is possible  
+
+### Decision Policy
+- If the path is clear → continue cruising  
+- If blocked and a safe gap exists → initiate lane change  
+- If blocked but unsafe to change → reduce speed and wait  
+
+### Key Improvements
+- Replaced fixed, position-based triggers with dynamic decision-making  
+- Introduced safety constraints for lane-change initiation  
+- Implemented adaptive speed control based on obstacle proximity  
+- Improved separation of concerns (perception, decision, and control layers)  
+
+This upgrade demonstrates a transition from static behavior to more reactive, sensor-driven autonomy.
+
+---
+
 ### Architecture
 
 The project is built using a **modular ES module structure**:
@@ -96,4 +131,6 @@ Serve the project root and open `index.html` in the browser.
 
 ## Motivation
 
-This project is built as part of a **self-driving car challenge** inspired by [comma.ai](https://comma.ai/) initiatives, demonstrating environment simulation, perception-style cues (traffic lights, hazards), and a maintainable path toward richer autonomy simulations.
+This project is built as part of a self-driving car challenge aligned with the engineering approach of comma.ai](https://comma.ai/ focusing on simulation, perception-style cues, and decision-driven autonomy.
+
+It demonstrates a progression from rule-based systems toward more reactive, sensor-driven behavior.
