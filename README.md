@@ -1,3 +1,4 @@
+
 # 3D Autonomous Driving Simulator (Driver View)
 
 ## Live Demo
@@ -6,6 +7,8 @@ https://software-me.github.io/lito-self-driving-car-repository/
 ## Demo Video
 **[Watch on YouTube](https://youtu.be/2_xpX455byI)**  
 [![Demo — click to play on YouTube](https://img.youtube.com/vi/2_xpX455byI/hqdefault.jpg)](https://youtu.be/2_xpX455byI)
+
+> Note: This video shows an earlier version of the simulator. The current live demo includes an updated decision-based obstacle handling system (detect → decide → act).
 
 ---
 
