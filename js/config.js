@@ -37,6 +37,8 @@ export const OBSTACLE_CAR_Z = -478;
 export const OBSTACLE_DELAY_AFTER_STRANDED_S = 5;
 export const OBSTACLE_BLOCK_THRESHOLD_M = 70;
 export const OBSTACLE_FORWARD_SLOW_RADIUS_M = 92;
+/** Minimum forward gap to obstacle before we allow a lane-change start. */
+export const OBSTACLE_MIN_LANE_CHANGE_DIST_M = 44;
 /** Floor (m/s) while still ahead of obstacle — prevents distObs*0.85→0 from freezing the car. */
 export const OBSTACLE_MIN_CREEP_MPS = 2.8;
 /** Ego z must be this far past OBSTACLE_CAR_Z before returning to right lane. */

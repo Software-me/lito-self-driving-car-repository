@@ -1,4 +1,6 @@
 /**
+ * Autonomous Car
+ * This is a self driving car simulator project
  * Perception / geometric queries (no rendering).
  * Feeds the vehicle FSM with distance-style facts.
  */
@@ -18,14 +20,23 @@ export function shouldStartLightApproach(carZ, trafficLightPassed) {
 }
 
 /**
- * Longitudinal distance (m) to the stranded vehicle ahead in the left lane.
- * Positive while approaching from behind; ≤0 once the ego passes its Z.
+ * Longitudinal distance to the stranded car along −Z travel (positive until ego passes its Z).
  */
 export function distanceToStrandedCarAhead(carZ) {
   return carZ - C.STRANDED_CAR_Z;
 }
 
-/** Longitudinal distance (m) to the right-lane obstacle when it is active (same sign convention as stranded). */
+/**
+ * Longitudinal distance to the right-lane obstacle (positive until ego passes its Z).
+ */
 export function distanceToObstacleAhead(carZ) {
   return carZ - C.OBSTACLE_CAR_Z;
+}
+
+/**
+ * Simple lane-change safety rule:
+ * only begin a lane change if we still have enough longitudinal room.
+ */
+export function safeToChangeLane(distanceAhead, minDistance) {
+  return distanceAhead > minDistance;
 }

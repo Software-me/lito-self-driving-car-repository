@@ -26,6 +26,47 @@ let strandedCarPassed = false;
 let postStrandedObstacleTimer = 0;
 let obstacleActive = false;
 let obstacleAvoidanceComplete = false;
+let obstacleResponse = "none";
+
+function detectObstacle(z) {
+  const distanceAhead = sensor.distanceToObstacleAhead(z);
+  const approaching = distanceAhead > 0;
+  return {
+    distanceAhead,
+    approaching,
+    blocked: approaching && distanceAhead < C.OBSTACLE_BLOCK_THRESHOLD_M,
+    withinSlowRadius: approaching && distanceAhead < C.OBSTACLE_FORWARD_SLOW_RADIUS_M,
+  };
+}
+
+// Decision policy:
+// - If path is clear -> continue cruising
+// - If blocked and safe gap exists -> change lane
+// - If blocked but unsafe to change -> slow down
+function decideObstacleResponse(obstacleFacts) {
+  if (!obstacleFacts.blocked) return "cruise";
+  if (sensor.safeToChangeLane(obstacleFacts.distanceAhead, C.OBSTACLE_MIN_LANE_CHANGE_DIST_M)) {
+    return "change_lane";
+  }
+  return "slow_down";
+}
+
+function applyObstacleResponse(response, targetSpeed, distanceAhead) {
+  if (response === "slow_down") {
+    const blockWindow = Math.max(
+      1,
+      C.OBSTACLE_BLOCK_THRESHOLD_M - C.OBSTACLE_MIN_LANE_CHANGE_DIST_M,
+    );
+    const normalized = Math.max(
+      0,
+      Math.min(1, (distanceAhead - C.OBSTACLE_MIN_LANE_CHANGE_DIST_M) / blockWindow),
+    );
+    const desired = C.OBSTACLE_MIN_CREEP_MPS + (12 - C.OBSTACLE_MIN_CREEP_MPS) * normalized;
+    const capped = Math.min(12, Math.max(C.OBSTACLE_MIN_CREEP_MPS, desired));
+    return Math.min(targetSpeed, capped);
+  }
+  return targetSpeed;
+}
 
 export function toggleAutonomous() {
   autonomous = !autonomous;
@@ -107,6 +148,7 @@ export function resetVehicleState() {
   postStrandedObstacleTimer = 0;
   obstacleActive = false;
   obstacleAvoidanceComplete = false;
+  obstacleResponse = "none";
   setObstacleCarVisible(false);
 }
 
@@ -147,6 +189,7 @@ export function updateVehicle(dt, hud) {
     if (lanePhase === "right_lane") {
       targetSteer = 0;
       W.car.position.x = C.RIGHT_LANE_X;
+      obstacleResponse = "none";
       if (strandedCarPassed && !obstacleAvoidanceComplete) {
         postStrandedObstacleTimer += dt;
         if (postStrandedObstacleTimer >= C.OBSTACLE_DELAY_AFTER_STRANDED_S && !obstacleActive) {
@@ -155,12 +198,15 @@ export function updateVehicle(dt, hud) {
         }
       }
       if (obstacleActive && !obstacleAvoidanceComplete) {
-        const distObs = sensor.distanceToObstacleAhead(z);
-        const approachingObs = distObs > 0;
-        const blockedObs = approachingObs && distObs < C.OBSTACLE_BLOCK_THRESHOLD_M;
-        if (blockedObs) {
+        const obstacleFacts = detectObstacle(z);
+        const decision = decideObstacleResponse(obstacleFacts);
+        obstacleResponse = decision;
+        if (decision === "change_lane") {
           lanePhase = "signal_left_obstacle";
           lanePhaseTimer = 0;
+          obstacleResponse = "change_lane";
+        } else if (decision === "slow_down" && obstacleFacts.withinSlowRadius) {
+          targetSpeed = applyObstacleResponse(decision, targetSpeed, obstacleFacts.distanceAhead);
         }
       }
       if (sensor.shouldStartLightApproach(z, trafficLightPassed)) {
@@ -170,12 +216,14 @@ export function updateVehicle(dt, hud) {
     } else if (lanePhase === "signal_left_obstacle") {
       targetSteer = 0;
       W.car.position.x = C.RIGHT_LANE_X;
+      obstacleResponse = "change_lane";
       if (lanePhaseTimer > 2.5) {
         lanePhase = "changing_lane_left_obstacle";
         lanePhaseTimer = 0;
       }
     } else if (lanePhase === "changing_lane_left_obstacle") {
       targetSteer = 0;
+      obstacleResponse = "change_lane";
       const changeDuration = 2.2;
       const t = Math.min(1, laneChangeElapsed / changeDuration);
       W.car.position.x = C.RIGHT_LANE_X + (C.LEFT_LANE_X - C.RIGHT_LANE_X) * t;
@@ -186,6 +234,7 @@ export function updateVehicle(dt, hud) {
       }
     } else if (lanePhase === "left_lane_obstacle") {
       targetSteer = 0;
+      obstacleResponse = "change_lane";
       W.car.position.x = C.LEFT_LANE_X;
       if (z < C.OBSTACLE_CAR_Z - C.OBSTACLE_PASS_CLEAR_M) {
         lanePhase = "signal_right_obstacle";
@@ -193,6 +242,7 @@ export function updateVehicle(dt, hud) {
       }
     } else if (lanePhase === "signal_right_obstacle") {
       targetSteer = 0;
+      obstacleResponse = "change_lane";
       W.car.position.x = C.LEFT_LANE_X;
       if (lanePhaseTimer > 2.5) {
         lanePhase = "changing_lane_right_obstacle";
@@ -200,6 +250,7 @@ export function updateVehicle(dt, hud) {
       }
     } else if (lanePhase === "changing_lane_right_obstacle") {
       targetSteer = 0;
+      obstacleResponse = "change_lane";
       const changeDuration = 2.2;
       const t = Math.min(1, laneChangeElapsed / changeDuration);
       W.car.position.x = C.LEFT_LANE_X + (C.RIGHT_LANE_X - C.LEFT_LANE_X) * t;
@@ -296,14 +347,21 @@ export function updateVehicle(dt, hud) {
     targetSteer = controls.steerInput * 0.9;
   }
 
-  /* Obstacle cap must apply in every phase while still ahead of it — otherwise targetSpeed snaps
-   * back to cruise in signal/lane-change states and the speedometer stays flat. */
-  if (autonomous && obstacleActive && !obstacleAvoidanceComplete) {
+  /* Obstacle cap while still in/right of the hazard path (Z-only range). Skip during left_lane_obstacle:
+   * laterally clear of the obstacle, so resume cruise — real stacks use lateral clearance too, not Z alone. */
+  if (
+    autonomous &&
+    obstacleActive &&
+    !obstacleAvoidanceComplete &&
+    lanePhase !== "left_lane_obstacle"
+  ) {
     const distObs = sensor.distanceToObstacleAhead(W.car.position.z);
     if (distObs > 0 && distObs < C.OBSTACLE_FORWARD_SLOW_RADIUS_M) {
       const soft = distObs * 0.85;
       const capped = Math.min(12, Math.max(C.OBSTACLE_MIN_CREEP_MPS, soft));
-      targetSpeed = Math.min(targetSpeed, capped);
+      if (obstacleResponse !== "change_lane") {
+        targetSpeed = Math.min(targetSpeed, capped);
+      }
     }
   }
 
@@ -379,7 +437,10 @@ export function updateVehicle(dt, hud) {
     else if (lanePhase === "signal_right_for_stranded") status = "Right turn signal — stranded car ahead";
     else if (lanePhase === "left_lane") {
       const dz = sensor.distanceToStrandedCarAhead(W.car.position.z);
-      if (dz > 0 && dz < C.STRANDED_FORWARD_SLOW_RADIUS_M) status = "Slowing — vehicle ahead (sensor)";
+      if (dz > 0 && dz < C.STRANDED_FORWARD_SLOW_RADIUS_M) {
+        const strandedCap = Math.min(12, Math.max(0, dz * 0.85));
+        if (strandedCap < 11.95) status = "Slowing down — vehicle ahead (sensor)";
+      }
     } else if (lanePhase === "changing_lane_right_for_stranded") status = "Changing lane right — avoiding stranded car";
     else if (lanePhase === "signal_left_obstacle") status = "Left signal — obstacle in lane";
     else if (lanePhase === "changing_lane_left_obstacle") status = "Changing lane left — avoiding obstacle";
@@ -388,7 +449,17 @@ export function updateVehicle(dt, hud) {
     else if (lanePhase === "changing_lane_right_obstacle") status = "Merging right — obstacle clear";
     else if (lanePhase === "right_lane" && obstacleActive && !obstacleAvoidanceComplete) {
       const dObs = sensor.distanceToObstacleAhead(W.car.position.z);
-      if (dObs > 0 && dObs < C.OBSTACLE_FORWARD_SLOW_RADIUS_M) status = "Slowing — obstacle ahead (sensor)";
+      const obstacleSlowTarget = applyObstacleResponse("slow_down", 12, dObs);
+      if (
+        obstacleResponse === "slow_down" &&
+        dObs > 0 &&
+        dObs < C.OBSTACLE_FORWARD_SLOW_RADIUS_M &&
+        obstacleSlowTarget < 11.95
+      ) {
+        status = "Slowing down — waiting for safe lane change";
+      } else if (dObs > 0 && dObs < C.OBSTACLE_FORWARD_SLOW_RADIUS_M) {
+        status = "Preparing lane change — obstacle ahead";
+      }
     } else if (lanePhase === "traffic_approach") status = "Approaching red traffic light";
     else if (lanePhase === "traffic_wait" && lanePhaseTimer <= 2.4) status = "Stopped — red light";
     else if (lanePhase === "traffic_wait") status = "Green light — proceeding";
